@@ -2,8 +2,9 @@
 
 Turn scanned tables and PDFs into spreadsheets you can review, edit and export locally.
 
-<!-- TODO: Record the real app using media/GIF_SHOTLIST.md and drop the file at media/demo.gif. -->
 ![Table to Excel demo](media/demo.gif)
+
+<sub>Actual OCR, correction and XLSX export; playback condensed. [Recording details](media/DEMO.md).</sub>
 
 [![Download for Windows](https://img.shields.io/badge/Download_for_Windows-download-238636)](https://github.com/DylanMartinLSC/TableToExcel/releases/latest/download/TableToExcel-windows.zip)
 
