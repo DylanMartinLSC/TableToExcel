@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Table to Excel (browser prototype)</title>
+  <style>
+    :root { --ink: #1d2a2e; --muted: #5d6b6f; --line: #d5dddf; --accent: #174b56; --bg: #fbfcfc; }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink: #e3ebed; --muted: #9aa9ad; --line: #34444a; --accent: #6fb3c1; --bg: #121a1c; }
+    }
+    body { margin: 0 auto; max-width: 860px; padding: 24px 16px; font: 16px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+    h1 { margin: 0 0 4px; font-size: 1.6rem; }
+    p.lede { margin: 0 0 20px; color: var(--muted); }
+    fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 0 0 16px; padding: 12px 16px; display: grid; gap: 8px; }
+    button { font: inherit; padding: 8px 18px; border: 0; border-radius: 6px; background: var(--accent); color: var(--bg); cursor: pointer; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    #log { font: 13px/1.6 ui-monospace, monospace; color: var(--muted); white-space: pre-wrap; border-left: 3px solid var(--line); padding-left: 12px; margin: 16px 0; }
+    .wrap { overflow-x: auto; margin-bottom: 16px; }
+    table { border-collapse: collapse; }
+    td { border: 1px solid var(--line); padding: 4px 10px; }
+    tr:first-child td { font-weight: 600; }
+    a.download { color: var(--accent); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Table to Excel</h1>
+  <p class="lede">Browser prototype: img2table runs in Pyodide and Tesseract in WebAssembly. Your image never leaves this device.</p>
+  <fieldset>
+    <input id="file" type="file" accept=".png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.pdf">
+    <label>PDF pages (blank means all) <input id="pages" placeholder="1, 3-5"></label>
+    <label><input id="borderless" type="checkbox"> Find tables without borders (slower)</label>
+    <label><input id="implicit" type="checkbox"> Find rows and columns with missing dividing lines</label>
+    <label>Minimum OCR confidence <input id="confidence" type="number" min="0" max="99" value="50"></label>
+  </fieldset>
+  <button id="run" disabled>Loading…</button>
+  <div id="log"></div>
+  <div id="results"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const log = (text) => { $("log").textContent += text + "\n"; };
+    const worker = new Worker("worker.js");
+    const pending = new Map();
+    let nextId = 0;
+    worker.onmessage = ({ data }) => {
+      if (data.log) return log(data.log);
+      const { resolve, reject } = pending.get(data.id);
+      pending.delete(data.id);
+      data.error ? reject(new Error(data.error)) : resolve(data.result);
+    };
+    const call = (command, args) => new Promise((resolve, reject) => {
+      pending.set(++nextId, { resolve, reject });
+      worker.postMessage({ id: nextId, command, args });
+    });
+    const seconds = (start) => ((performance.now() - start) / 1000).toFixed(1) + " s";
+
+    async function setup() {
+      const start = performance.now();
+      log("Loading Python, OpenCV and img2table…");
+      const [info, ocr] = await Promise.all([
+        call("init"),
+        Tesseract.createWorker("eng").then(async (w) => {
+          await w.setParameters({ tessedit_pageseg_mode: "11" });  // Same sparse-text mode as the desktop app.
+          return w;
+        }),
+      ]);
+      log(`Ready in ${seconds(start)}. OpenCV ${info.opencv}, ximgproc ${info.ximgproc ? "built in" : "shimmed"}.`);
+      return ocr;
+    }
+
+    const PDFJS = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/";
+    const MAX_PAGES = 50;  // Same limits as converter.py.
+    const MAX_BYTES = 30 * 1024 * 1024;
+
+    // Yields each selected page as a 200 DPI PNG, the scale img2table renders PDFs at.
+    async function* pdfPages(data, selected) {
+      const pdfjs = await import(PDFJS + "pdf.min.mjs");
+      pdfjs.GlobalWorkerOptions.workerSrc = PDFJS + "pdf.worker.min.mjs";
+      let doc;
+      try {
+        doc = await pdfjs.getDocument({ data }).promise;
+      } catch {
+        throw new Error("Cannot open this PDF. It may be damaged or password-protected.");
+      }
+      try {
+        if (doc.numPages > MAX_PAGES) throw new Error("PDFs must have between 1 and 50 pages. Split larger files first.");
+        const indexes = selected ?? [...Array(doc.numPages).keys()];
+        if (Math.max(...indexes) >= doc.numPages) throw new Error(`This document has only ${doc.numPages} page(s).`);
+        for (const index of indexes) {
+          const page = await doc.getPage(index + 1);
+          const viewport = page.getViewport({ scale: 200 / 72 });
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.floor(viewport.width);
+          canvas.height = Math.floor(viewport.height);
+          const context = canvas.getContext("2d");
+          context.fillStyle = "white";  // Transparent pixels would turn black when converted to RGB.
+          context.fillRect(0, 0, canvas.width, canvas.height);
+          await page.render({ canvasContext: context, viewport }).promise;
+          const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+          page.cleanup();
+          yield { page: index + 1, data: new Uint8Array(await blob.arrayBuffer()), name: `page-${index + 1}.png` };
+        }
+      } finally {
+        await doc.destroy();
+      }
+    }
+
+    function render(tables, xlsx) {
+      const results = $("results");
+      results.replaceChildren();
+      if (!tables.length) return results.append("No tables found yet. Try the options above.");
+      for (const table of tables) {
+        const heading = document.createElement("h3");
+        heading.textContent = table.name;
+        const wrap = document.createElement("div");
+        wrap.className = "wrap";
+        const grid = document.createElement("table");
+        for (const row of table.rows) {
+          const tr = grid.insertRow();
+          for (const value of row) tr.insertCell().textContent = value;
+        }
+        wrap.append(grid);
+        results.append(heading, wrap);
+      }
+      const link = document.createElement("a");
+      link.className = "download";
+      link.href = URL.createObjectURL(new Blob([xlsx], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+      link.download = "tables.xlsx";
+      link.textContent = "Download Excel workbook";
+      results.append(link);
+    }
+
+    setup().then((ocr) => {
+      $("run").textContent = "Extract tables";
+      $("run").disabled = false;
+      $("run").onclick = async () => {
+        const file = $("file").files[0];
+        if (!file) return log("Choose an image first.");
+        $("run").disabled = true;
+        $("results").replaceChildren();
+        try {
+          const data = new Uint8Array(await file.arrayBuffer());
+          const isPdf = /\.pdf$/i.test(file.name);
+          if (isPdf && (!data.length || data.length > MAX_BYTES)) throw new Error("Each file must be nonempty and no larger than 30 MB.");
+          const selected = isPdf ? await call("pages", { text: $("pages").value }) : null;
+          await call("start", { name: file.name });
+          const sources = isPdf ? pdfPages(data, selected) : [{ page: 1, data, name: file.name }];
+          const found = [];
+          let start = performance.now();
+          for await (const source of sources) {
+            const label = isPdf ? `Page ${source.page}` : file.name;
+            log(`${label}: ${isPdf ? "rendered" : "loaded"} (${seconds(start)})`);
+            start = performance.now();
+            const png = await call("ocrInput", { data: source.data, name: source.name, rotation: 0 });
+            const { data: { hocr } } = await ocr.recognize(new Blob([png], { type: "image/png" }), {}, { hocr: true });
+            log(`${label}: prepared and OCR done (${seconds(start)})`);
+            start = performance.now();
+            const { tables, xlsx } = await call("extract", {
+              hocr,
+              page: source.page,
+              borderless: $("borderless").checked,
+              implicit: $("implicit").checked,
+              confidence: Number($("confidence").value),
+            });
+            log(`${label}: found ${tables.length} table(s) (${seconds(start)})`);
+            found.push(...tables);
+            render(found, xlsx);  // Show results as each page finishes.
+            start = performance.now();
+          }
+          log(`Done: ${found.length} table(s).`);
+        } catch (error) {
+          log("Error: " + error.message);
+        } finally {
+          $("run").disabled = false;
+        }
+      };
+    }).catch((error) => log("Setup failed: " + error.message));
+  </script>
+</body>
+</html>
