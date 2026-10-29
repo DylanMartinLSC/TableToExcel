@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="470" viewBox="0 0 1200 470" role="img" aria-labelledby="title desc">
+<title id="title">Table to Excel</title><desc id="desc">From scanned tables to editable spreadsheets. Local processing, CPU only, open source.</desc>
+<defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#102c35"/><stop offset="1" stop-color="#185b60"/></linearGradient></defs>
+<rect width="1200" height="470" rx="24" fill="url(#bg)"/>
+<g font-family="Segoe UI,Arial,sans-serif"><text x="64" y="76" fill="#8ee4cb" font-size="15" letter-spacing="3">YOUR DOCUMENTS. YOUR DEVICE.</text>
+<text x="60" y="151" fill="white" font-size="60" font-weight="700">Table to Excel</text>
+<text x="64" y="198" fill="#c4dce0" font-size="22">From scanned tables to editable spreadsheets.</text>
+<text x="64" y="235" fill="#c4dce0" font-size="22">Free software. Local processing. No GPU required.</text>
+<g fill="#234b53" stroke="#57848a"><rect x="64" y="285" width="135" height="38" rx="19"/><rect x="211" y="285" width="135" height="38" rx="19"/><rect x="358" y="285" width="140" height="38" rx="19"/></g>
+<g fill="#e3f6f3" font-size="15" text-anchor="middle"><text x="131" y="310">CPU ONLY</text><text x="278" y="310">MIT LICENSE</text><text x="428" y="310">XLSX + CSV</text></g>
+<text x="64" y="409" fill="#a8cacf" font-size="15">Choose a file → Extract tables → Review cells → Download</text>
+<g transform="translate(725 65)"><rect x="0" y="0" width="270" height="295" rx="13" fill="#e6edef" transform="rotate(-7 135 148)"/>
+<rect x="42" y="33" width="300" height="300" rx="14" fill="white"/><rect x="42" y="33" width="300" height="53" rx="14" fill="#8ee4cb"/><rect x="42" y="72" width="300" height="14" fill="#8ee4cb"/>
+<text x="61" y="67" fill="#123d42" font-size="19" font-weight="700">Ready for your spreadsheet</text>
+<g stroke="#d7e5e6" stroke-width="2"><path d="M62 110H322 M62 161H322 M62 212H322 M62 263H322 M62 308H322 M220 110V308"/></g>
+<g fill="#24515b" font-size="18"><text x="68" y="143">Product</text><text x="239" y="143">Qty</text><text x="68" y="194">Apples</text><text x="244" y="194">12</text><text x="68" y="245">Oranges</text><text x="244" y="245">08</text><text x="68" y="295">Pears</text><text x="244" y="295">24</text></g>
+<circle cx="329" cy="330" r="28" fill="#8ee4cb" stroke="#164b53" stroke-width="5"/><path d="m316 330 9 9 17-19" fill="none" stroke="#164b53" stroke-width="5" stroke-linecap="round"/>
+</g></g></svg>
