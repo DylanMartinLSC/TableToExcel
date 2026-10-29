@@ -6,3 +6,11 @@ __pycache__/
 
 # Built by web/build_img2table.py
 web/vendor/
+
+# Portable build outputs
+build/
+dist/
+release/
+*.spec
+*.egg-info/
+.demo-recording/

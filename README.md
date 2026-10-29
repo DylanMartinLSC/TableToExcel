@@ -1,3 +1,16 @@
+# Table to Excel
+
+Turn scanned tables and PDFs into spreadsheets you can review, edit and export locally.
+
+<!-- TODO: Record the real app using media/GIF_SHOTLIST.md and drop the file at media/demo.gif. -->
+![Table to Excel demo](media/demo.gif)
+
+[![Download for Windows](https://img.shields.io/badge/Download_for_Windows-download-238636)](https://github.com/DylanMartinLSC/TableToExcel/releases/latest/download/TableToExcel-windows.zip)
+
+Windows builds are unsigned: if SmartScreen appears, choose **More info → Run anyway**.
+
+Extract the whole ZIP and run TableToExcel.exe. The portable build includes English Tesseract OCR and opens a local browser interface; keep its console open while working.
+
 <div align="center">
 
 ![Table to Excel — from scanned tables to editable spreadsheets](docs/assets/hero.svg)
