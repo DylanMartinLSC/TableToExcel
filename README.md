@@ -78,18 +78,7 @@ Open the local URL printed in the terminal, usually `http://127.0.0.1:8501`. Pre
 
 ## Your first conversion
 
-```mermaid
-flowchart LR
-    A[Choose images or PDFs] --> B[Extract tables]
-    B --> C[Review and correct cells]
-    C --> D[Download Excel or CSV]
-    B --> E{Missing a table?}
-    E --> F[Crop or enable borderless detection]
-    F --> B
-    style A fill:#e5f3f0,stroke:#247b7b,color:#163d47
-    style C fill:#e5f3f0,stroke:#247b7b,color:#163d47
-    style D fill:#185b60,stroke:#185b60,color:#ffffff
-```
+![Four-step conversion workflow with a retry option for missing tables](docs/assets/conversion-workflow.svg)
 
 1. Choose one or more files. For a large PDF, enter a page range such as `1, 3-5` in **Extraction options**.
 2. Select **Extract tables**. A large scan can take several minutes.
@@ -115,21 +104,7 @@ flowchart LR
 
 ## How it works
 
-```mermaid
-flowchart TD
-    Source[Image or PDF on your device] --> Validate[Validate file and page limits]
-    Validate --> Prepare[Decode / render and deskew]
-    Prepare --> Structure[img2table + OpenCV detect table structure]
-    Prepare --> Clean[Remove long grid rules from the OCR copy]
-    Clean --> OCR[Tesseract reads printed text on CPU]
-    Structure --> Tables[Combine cells, text, and detected merges]
-    OCR --> Tables
-    Tables --> Review[Streamlit review and editing interface]
-    Review --> XLSX[openpyxl: XLSX workbook]
-    Review --> CSV[CSV files in ZIP]
-    style OCR fill:#e5f3f0,stroke:#247b7b,color:#163d47
-    style Review fill:#185b60,stroke:#185b60,color:#ffffff
-```
+![Local architecture: validation, table detection and OCR, review, and spreadsheet export](docs/assets/architecture.svg)
 
 The local engine uses [img2table](https://github.com/xavctn/img2table) for table structure and [Tesseract](https://github.com/tesseract-ocr/tesseract) for OCR. Long rules are removed from a separate OCR copy so grid lines interfere less with text recognition; the structural image retains its lines. Processing runs sequentially to limit CPU pressure.
 
