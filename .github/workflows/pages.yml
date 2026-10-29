@@ -1,0 +1,38 @@
+name: Pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen --python 3.12
+      # Mirror the repo layout: web/worker.js fetches ../converter.py.
+      - run: |
+          uv run python web/build_img2table.py _site/web/vendor
+          rm -rf _site/web/vendor/staging
+          cp converter.py _site/
+          cp web/index.html web/worker.js web/browser.py _site/web/
+          printf '<!doctype html><meta http-equiv="refresh" content="0; url=web/">\n' > _site/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
